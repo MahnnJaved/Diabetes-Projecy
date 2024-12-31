@@ -1,0 +1,257 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+# Load dataset
+file_path = 'diabetes.csv'  # Replace with the path to your dataset
+try:
+    df = pd.read_csv(file_path)
+except FileNotFoundError:
+    messagebox.showerror("Error", f"The file {file_path} was not found.")
+
+# Prepare data
+x = df.drop(['Outcome'], axis=1)
+y = df['Outcome']
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0)
+
+# Train model
+rf = RandomForestClassifier()
+rf.fit(x_train, y_train)
+
+# Calculate and print accuracy
+accuracy = accuracy_score(y_test, rf.predict(x_test)) * 100
+print(f"Model Accuracy: {accuracy:.2f}%")
+
+# GUI Application
+def predict():
+    try:
+        user_data = {
+            'Pregnancies': int(pregnancies_var.get()),
+            'Glucose': int(glucose_var.get()),
+            'BloodPressure': int(bp_var.get()),
+            'SkinThickness': int(skinthickness_var.get()),
+            'Insulin': int(insulin_var.get()),
+            'BMI': float(bmi_var.get()),
+            'DiabetesPedigreeFunction': float(dpf_var.get()),
+            'Age': int(age_var.get())
+        }
+
+        user_df = pd.DataFrame(user_data, index=[0])
+        prediction = rf.predict(user_df)[0]
+
+        result_text = 'You are Diabetic' if prediction == 1 else 'You are not Diabetic'
+        show_result_page(result_text, prediction)
+
+    except ValueError:
+        messagebox.showerror("Input Error", "Please enter valid numbers for all fields.")
+
+# Global variable for result page frame
+result_page_frame = None
+
+
+# Function to show the result page with styled text and transition effect for the result
+def show_result_page(result_text, prediction):
+    global result_page_frame  # Use global variable
+
+    main_page_frame.pack_forget()  # Hide the prediction page
+    
+    # Result Page Frame with light red background and border
+    result_page_frame = tk.Frame(root, bg="#f8bbd0", relief="solid", borderwidth=2)
+    result_page_frame.pack(fill="both", expand=True)
+
+    # Center the output content (Heading and Result)
+    center_frame = tk.Frame(result_page_frame, bg="#f8bbd0")
+    center_frame.pack(expand=True)
+
+    # Heading for the result page (centered)
+    heading_label = tk.Label(center_frame, text="OUTPUT OF THE PREDICTION IS:", font=("Arial", 20, "bold"), bg="#f8bbd0", fg="#c62828")
+    heading_label.pack(pady=20)
+
+    # Display the result text with transition animation (gradual display of text)
+    result_label = tk.Label(center_frame, text="", font=("Arial", 24, "bold"), fg="black", bg="#f8bbd0")
+    result_label.pack(pady=20)  # Add padding to separate it from the heading
+
+    # Animation function to gradually display the result text
+    def animate_result_text(index=0, text=result_text):
+        if index < len(text):
+            result_label.config(text=text[:index+1])  # Show text progressively
+            root.after(100, animate_result_text, index+1, text)  # Update every 100ms
+
+    # Start the animation after a short delay
+    root.after(500, animate_result_text)
+
+    # Add a "Back to Main Page" Button to restart the prediction
+    back_button = ttk.Button(result_page_frame, text="Back to Main Page", command=show_main_page, style="TButton")
+    back_button.pack(pady=20)
+
+# Function to show the main page again
+def show_main_page():
+    global result_page_frame  # Use global variable
+    result_page_frame.pack_forget()  # Hide the result page
+    
+    # Reset all the entry fields to empty
+    pregnancies_var.set("")
+    bp_var.set("")
+    skinthickness_var.set("")
+    glucose_var.set("")
+    insulin_var.set("")
+    bmi_var.set("")
+    dpf_var.set("")
+    age_var.set("")
+    
+    # Show the main prediction page
+    main_page_frame.pack(fill="both", expand=True)
+
+# Function to hide the welcome page and show the main page
+def start_project():
+    welcome_frame.pack_forget()  # Hide the welcome page
+    main_page_frame.pack(fill="both", expand=True)  # Show the main prediction page
+
+# Function to show Help section
+def show_help():
+    # Create a new window for the Help section
+    help_window = tk.Toplevel(root)
+    help_window.title("Help - Diabetes Prediction")
+    help_window.geometry("600x400")  # Set the size of the Help window
+    help_window.configure(bg="#f8bbd0")  # Light red background for the Help window
+
+    # Title Label for the Help section
+    title_label = tk.Label(help_window, 
+                           text="Diabetes Prediction Help", 
+                           font=("Arial", 18, "bold"), 
+                           fg="#c62828",  # Dark red text
+                           bg="#f8bbd0")  # Light red background
+    title_label.pack(pady=10)
+
+    # Add a separator line for better visual separation
+    separator = tk.Frame(help_window, height=2, bd=1, relief="solid", bg="#c62828")  # Dark red line
+    separator.pack(fill="x", padx=10, pady=5)
+
+    # Help text content with styling
+    help_text = """
+    This tool predicts whether a person is diabetic or not based on the following input features:
+
+    1. *Pregnancies*: Number of times pregnant
+    2. *Glucose*: Plasma glucose concentration
+    3. *Blood Pressure*: Diastolic blood pressure (mm Hg)
+    4. *Skin Thickness*: Skinfold thickness (mm)
+    5. *Insulin*: 2-Hour serum insulin (mu U/ml)
+    6. *BMI*: Body mass index (weight in kg/(height in m)^2)
+    7. *Diabetes Pedigree Function*: Family history of diabetes
+    8. *Age*: Age in years
+
+    *Instructions*:
+    - Enter values for all the fields on the prediction page.
+    - Click the "Predict" button to get your result.
+    - Click "Back to Main Page" to restart the prediction.
+    """
+    
+    # Help text label with font and wrapping for better readability
+    help_label = tk.Label(help_window, 
+                          text=help_text, 
+                          font=("Arial", 12), 
+                          fg="black",  # Black text color
+                          bg="#f8bbd0",  # Light red background
+                          justify="left",  # Left-align the text
+                          wraplength=550)  # Wrap text to fit the window width
+    help_label.pack(padx=20, pady=10)
+
+    # Close button with styling
+    close_button = ttk.Button(help_window, text="Close", command=help_window.destroy, style="TButton")
+    close_button.pack(pady=10)
+
+# Create main window
+root = tk.Tk()
+root.title("Diabetes Prediction")
+root.geometry("800x700")  # Set a larger window size for better display
+root.configure(bg="#f8bbd0")  # Light red background color for the whole window
+
+# Create Welcome Page Frame with a darker red background and border
+welcome_frame = tk.Frame(root, bg="#c62828", padx=20, pady=20, relief="solid", borderwidth=2)
+welcome_frame.pack(fill="both", expand=True)
+
+# Create a frame for centering the welcome label and start button
+center_frame = tk.Frame(welcome_frame, bg="#c62828")
+center_frame.pack(expand=True)
+
+# Welcome Label with animation effect and bigger font, centered
+welcome_label = tk.Label(center_frame, text="", font=("Arial", 28, "bold"), bg="#c62828", fg="white")
+welcome_label.pack(pady=50)
+
+# Animation function to gradually display the welcome message
+def animate_text(index=0, text="Welcome to the Diabetes Prediction Project"):
+    if index < len(text):
+        welcome_label.config(text=text[:index+1])  # Show text progressively
+        root.after(150, animate_text, index+1, text)  # Update every 150ms
+
+# Start the animation after a short delay
+root.after(500, animate_text)
+
+# Start Project Button with a lighter red shade and dark red text
+start_button = ttk.Button(center_frame, text="Start Project", command=start_project, style="TButton")
+start_button.pack(pady=20)
+
+# Add Help Button
+help_button = ttk.Button(center_frame, text="Help", command=show_help, style="TButton")
+help_button.pack(pady=10)
+
+# Main Prediction Page Frame with a light red background and border
+main_page_frame = tk.Frame(root, bg="#f8bbd0", relief="solid", borderwidth=2)  # Adding border to the frame
+
+# Headings and styling with larger font and centered text
+header_label = tk.Label(main_page_frame, text="Diabetes Prediction", font=("Arial", 24, "bold"), fg="#c62828", bg="#f8bbd0")
+header_label.grid(row=0, column=0, columnspan=8, pady=20)
+
+# Fields for user input
+fields = ["Pregnancies", "BloodPressure", "SkinThickness", "Glucose" ,"Insulin", "BMI", "DPF", "Age"]
+variables = {}
+
+# Create labels and input fields with equal width for all entries
+entry_width = 20  # Set a fixed width for all entry fields to make them equal in size
+
+for idx, field in enumerate(fields):
+    label = ttk.Label(main_page_frame, text=field, font=("Arial", 12, "bold"), background="#f8bbd0", foreground="#c62828")
+    label.grid(row=1, column=idx, padx=10, pady=10, sticky="w", columnspan=1)
+
+    var = tk.StringVar()
+
+    entry = tk.Entry(main_page_frame, textvariable=var, font=("Arial", 12), width=entry_width, justify="center")  # Fixed width for all fields
+    entry.grid(row=2, column=idx, padx=10, pady=10, sticky="w")
+    variables[field] = var
+
+# Assign variables for each field
+pregnancies_var = variables["Pregnancies"]
+bp_var = variables["BloodPressure"]
+skinthickness_var = variables["SkinThickness"]
+glucose_var = variables["Glucose"]
+insulin_var = variables["Insulin"]
+bmi_var = variables["BMI"]
+dpf_var = variables["DPF"]
+age_var = variables["Age"]
+
+# Adjust spacing for Predict button and its placement
+predict_button = ttk.Button(main_page_frame, text="Predict", command=predict, style="TButton")
+predict_button.grid(row=3, column=0, columnspan=8, pady=30)
+
+# Custom styling for buttons with smaller font size for better fitting and dark red text
+style = ttk.Style()
+style.configure("TButton", 
+                font=("Arial", 10, "bold"),  # Smaller font for better button fitting
+                foreground="#c62828",  # Dark red text color for the button
+                background="#c62828",  # Dark red background for the button
+                padding=8)
+
+# Configure grid column and row weights to make the layout responsive
+main_page_frame.grid_rowconfigure(0, weight=1)
+main_page_frame.grid_rowconfigure(1, weight=1)
+main_page_frame.grid_rowconfigure(2, weight=1)
+main_page_frame.grid_rowconfigure(3, weight=1)
+for col in range(8):
+    main_page_frame.grid_columnconfigure(col, weight=1)
+
+# Start main loop
+root.mainloop()
